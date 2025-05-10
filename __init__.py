@@ -99,7 +99,7 @@ class AppleBooksCovers(Source):
 
     def get_cover_urls(self, log, title, author, identifiers):
         base_params = {
-            "media": "ebook",
+            "entity": "ebook",
             "limit": self.prefs[self.KEY_MAX_COVERS],
             "version": "2",
         }
