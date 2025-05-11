@@ -2,6 +2,7 @@
 
 import os
 import sys
+import typing
 import unittest
 from queue import Queue
 from threading import Event
@@ -9,15 +10,18 @@ from threading import Event
 test_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path = [test_dir, *sys.path]
 
-from calibre_plugins.applebooks_covers import AppleBooksCovers
+from calibre.utils.logging import default_log  # noqa: E402
 
-from calibre.utils.logging import default_log
+if typing.TYPE_CHECKING:
+    from .. import AppleBooksCovers
+else:
+    from calibre_plugins.applebooks_covers import AppleBooksCovers
 
 
 class TestAppleBooksCovers(unittest.TestCase):
     def setUp(self):
         self.plugin = AppleBooksCovers(None)
-        self.plugin.log = default_log
+        self.plugin.log = default_log  # type: ignore[reportAttributeAccessIssue]
         self.queue = Queue()
 
     def test_isbn_lookup(self):
