@@ -2,14 +2,39 @@
 # https://bendodson.com/projects/itunes-artwork-finder/
 # https://github.com/lbschenkel/calibre-amazon-hires-covers
 
+from __future__ import annotations
+
 import json
+import pprint
+from dataclasses import dataclass
 from itertools import cycle, islice
+from typing import TYPE_CHECKING, Any, Generator, Iterable, TypeVar, cast
 from urllib.parse import urlencode, urljoin
 
 from calibre.ebooks.metadata.sources.base import Option, Source
 
+if TYPE_CHECKING:
+    from queue import Queue
+    from threading import Event
+
+    from calibre.utils.browser import Browser
+    from calibre.utils.logging import Log
+
 BASE_URL_LOOKUP = "https://itunes.apple.com/lookup?"
 BASE_URL_SEARCH = "https://itunes.apple.com/search?"
+
+
+@dataclass
+class Result:
+    author: str
+    title: str
+    artwork_url: str
+
+    @classmethod
+    def from_dict(cls, result: dict[str, Any]) -> Result:
+        image = "100000x100000-999.jpg"
+        artwork_url = urljoin(result["artworkUrl100"], image)
+        return cls(result["artistName"], result["trackName"], artwork_url)
 
 
 def load_countries():
@@ -67,14 +92,14 @@ class AppleBooksCovers(Source):
 
     def download_cover(
         self,
-        log,
-        result_queue,
-        abort,
-        title=None,
-        authors=None,
-        identifiers=None,
-        timeout=30,
-        get_best_cover=False,
+        log: Log,
+        result_queue: Queue[tuple[AppleBooksCovers, bytes]],
+        abort: Event,
+        title: str | None = None,
+        authors: tuple[str, ...] | None = None,
+        identifiers: dict[str, str] | None = None,
+        timeout: int = 30,
+        get_best_cover: bool = False,
     ):
         if identifiers is None:
             identifiers = {}
@@ -82,7 +107,6 @@ class AppleBooksCovers(Source):
         title = " ".join(self.get_title_tokens(title))
         author = " ".join(self.get_author_tokens(authors))
         urls = self.get_cover_urls(log, title, author, identifiers)
-        log.info("Cover URLs: " + repr(urls))
 
         if urls:
             self.download_multiple_covers(
@@ -97,16 +121,22 @@ class AppleBooksCovers(Source):
                 self.KEY_MAX_COVERS,
             )
 
-    def get_cover_urls(self, log, title, author, identifiers):
+    def get_cover_urls(
+        self,
+        log: Log,
+        title: str,
+        author: str,
+        identifiers: dict[str, str],
+    ):
         base_params = {
             "entity": "ebook",
-            "limit": self.prefs[self.KEY_MAX_COVERS],
+            "limit": int(self.prefs[self.KEY_MAX_COVERS]),
             "version": "2",
         }
-        country = self.prefs[self.KEY_COUNTRY]
-        country2 = self.prefs[self.KEY_ADDITIONAL_COUNTRY]
+        country = cast("str", self.prefs[self.KEY_COUNTRY])
+        country2 = cast("str | None", self.prefs[self.KEY_ADDITIONAL_COUNTRY])
 
-        results = []
+        results: list[Result] = []
 
         # Try looking up the ISBN first
         if "isbn" in identifiers:
@@ -138,36 +168,37 @@ class AppleBooksCovers(Source):
         # we want to prioritize the earlier results from both searches
         results.extend(roundrobin(*search_results))
 
+        log.info(f"Found results: {pprint.pformat(results)}")
+
         # Remove duplicates while preserving order
-        return list(dict.fromkeys(self.get_full_cover_urls(results)))
-
-    def get_full_cover_urls(self, results):
-        image = "100000x100000-999.jpg"
-        return [urljoin(result["artworkUrl100"], image) for result in results]
+        return list(dict.fromkeys(result.artwork_url for result in results))
 
 
-def get_url_json(browser, url):
+def get_url_json(browser: Browser, url: str) -> dict[str, Any]:
     r = browser.open(url)
     if r is None:
         return {}
     return json.loads(r.read().decode("utf-8"))
 
 
-def lookup(params, browser, log):
+def lookup(params: dict[str, Any], browser: Browser, log: Log) -> list[Result]:
     url = BASE_URL_LOOKUP + urlencode(params)
     log.info("Lookup URL: " + url)
     results = get_url_json(browser, url)
-    return results.get("results", [])
+    return [Result.from_dict(result) for result in results.get("results", [])]
 
 
-def search(params, browser, log):
+def search(params: dict[str, Any], browser: Browser, log: Log) -> list[Result]:
     url = BASE_URL_SEARCH + urlencode(params)
     log.info("Search URL: " + url)
     results = get_url_json(browser, url)
-    return results.get("results", [])
+    return [Result.from_dict(result) for result in results.get("results", [])]
 
 
-def roundrobin(*iterables):
+T = TypeVar("T")
+
+
+def roundrobin(*iterables: Iterable[T]) -> Generator[T, None, None]:
     "Visit input iterables in a cycle until each is exhausted."
     # roundrobin('ABC', 'D', 'EF') → A D E B F C
     # Algorithm credited to George Sakkis

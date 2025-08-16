@@ -1,3 +1,14 @@
+[project]
+name = "apple-books-covers"
+version = "1.0.0"
+description = "Downloads high resolution covers from the Apple Books store"
+readme = "README.md"
+license = "GPL-3.0-only"
+license-files = ["LICENSE.md"]
+requires-python = "==3.8.5"
+# Sources: https://github.com/kovidgoyal/calibre/blob/master/bypy/sources.json
+dependencies = ["mechanize==0.4.8"]
+
 [tool.ruff]
 line-length = 88
 builtins = ["_", "I", "P", "load_translations", "get_resources", "get_icons"]
@@ -5,81 +16,81 @@ builtins = ["_", "I", "P", "load_translations", "get_resources", "get_icons"]
 [tool.ruff.lint]
 # https://docs.astral.sh/ruff/rules/
 select = [
-  "F", # pyflakes
-  "E", # pycodestyle Error
-  "W", # pycodestyle Warning
-  # "C90", # mccabe
-  "I", # isort
-  # "N", # pep8-naming
-  # "UP", # pyupgrade
-  "YTT", # flake8-2020
-  "S",   # flake8-bandit
-  "BLE", # flake8-blind-except
-  "B",   # flake8-bugbear
-  "A",   # flake8-builtins
-  "C4",  # flake8-comprehensions
-  "DTZ", # flake8-datetimez
-  "EXE", # flake8-executable
-  "ISC", # flake8-implicit-str-concat
-  "ICN", # flake8-import-conventions
-  # "G",   # flake8-logging-format
-  "INP", # flake8-no-pep420
-  "PIE", # flake8-pie
-  # "PT",  # flake8-pytest-style
-  # "RET", # flake8-return
-  # "SLF", # flake8-self
-  # "SIM", # flake8-simplify
-  "TC",  # flake8-type-checking
-  "ARG", # flake8-unused-arguments
-  # "PTH", # flake8-use-pathlib
-  "TD", # flake8-todos
-  # "ERA", # eradicate
-  "PGH", # pygrep-hooks
-  # "PLC", # Pylint Convention
-  "PLE", # Pylint Error
-  # "PLR", # Pylint Refactor
-  # "PLW", # Pylint Warning
-  "TRY",  # tryceratops
-  "FLY",  # flynt
-  "PERF", # Perflint
-  # "FURB", # refurb
-  "RUF", # Ruff-specific rules
+    "F", # pyflakes
+    "E", # pycodestyle Error
+    "W", # pycodestyle Warning
+    # "C90", # mccabe
+    "I", # isort
+    # "N", # pep8-naming
+    # "UP", # pyupgrade
+    "YTT", # flake8-2020
+    "S",   # flake8-bandit
+    "BLE", # flake8-blind-except
+    "B",   # flake8-bugbear
+    "A",   # flake8-builtins
+    "C4",  # flake8-comprehensions
+    "DTZ", # flake8-datetimez
+    "EXE", # flake8-executable
+    "ISC", # flake8-implicit-str-concat
+    "ICN", # flake8-import-conventions
+    # "G",   # flake8-logging-format
+    "INP", # flake8-no-pep420
+    "PIE", # flake8-pie
+    # "PT",  # flake8-pytest-style
+    # "RET", # flake8-return
+    # "SLF", # flake8-self
+    # "SIM", # flake8-simplify
+    "TC",  # flake8-type-checking
+    "ARG", # flake8-unused-arguments
+    # "PTH", # flake8-use-pathlib
+    "TD", # flake8-todos
+    # "ERA", # eradicate
+    "PGH", # pygrep-hooks
+    # "PLC", # Pylint Convention
+    "PLE", # Pylint Error
+    # "PLR", # Pylint Refactor
+    # "PLW", # Pylint Warning
+    "TRY",  # tryceratops
+    "FLY",  # flynt
+    "PERF", # Perflint
+    # "FURB", # refurb
+    "RUF", # Ruff-specific rules
 ]
 
 ignore = [
-  # builtin-attribute-shadowing: Class attribute {name} is shadowing a python builtin
-  # Attributes don't actually shadow anything
-  "A003",
-  # error-suffix-on-exception-name
-  "N818",
-  # raise-vanilla-args: Avoid specifying long messages outside the exception class
-  "TRY003",
-  # try-consider-else: Consider moving this statement to an else block
-  "TRY300",
-  # Disable some rules that conflict with the formatter
-  # https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules
-  "W191",
-  "E111",
-  "E114",
-  "E117",
-  "E501",
-  "D206",
-  "D300",
-  "Q000",
-  "Q001",
-  "Q002",
-  "Q003",
-  "COM812",
-  "COM819",
-  "ISC001",
-  "ISC002",
+    # builtin-attribute-shadowing: Class attribute {name} is shadowing a python builtin
+    # Attributes don't actually shadow anything
+    "A003",
+    # error-suffix-on-exception-name
+    "N818",
+    # raise-vanilla-args: Avoid specifying long messages outside the exception class
+    "TRY003",
+    # try-consider-else: Consider moving this statement to an else block
+    "TRY300",
+    # Disable some rules that conflict with the formatter
+    # https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules
+    "W191",
+    "E111",
+    "E114",
+    "E117",
+    "E501",
+    "D206",
+    "D300",
+    "Q000",
+    "Q001",
+    "Q002",
+    "Q003",
+    "COM812",
+    "COM819",
+    "ISC001",
+    "ISC002",
 ]
 
 unfixable = [
-  # unused-variable: Local variable {name} is assigned to but never used
-  # This can be undesirable if the file is saved before adding the code that
-  # uses a variable.
-  "F841",
+    # unused-variable: Local variable {name} is assigned to but never used
+    # This can be undesirable if the file is saved before adding the code that
+    # uses a variable.
+    "F841",
 ]
 
 # https://github.com/microsoft/pyright/blob/main/docs/configuration.md
@@ -89,13 +100,46 @@ exclude = ["**/__pycache__"]
 extraPaths = ["../calibre/src"]
 ignore = ["../calibre/src"]
 pythonVersion = "3.8"
-reportDuplicateImport = "error"
 reportImportCycles = "warning"
-# reportPrivateUsage = "warning"
-reportUnnecessaryCast = "warning"
-reportUnnecessaryIsInstance = "warning"
-reportUnusedFunction = "warning"
-reportUnusedVariable = "warning"
+strictParameterNoneValue = true
+
+# Individual strict checks
 strictListInference = true
 strictDictionaryInference = true
-strictParameterNoneValue = true
+strictSetInference = true
+reportMissingTypeStubs = "error"
+reportAssertAlwaysTrue = "error"
+reportInvalidStringEscapeSequence = "error"
+reportInvalidTypeVarUse = "error"
+reportSelfClsParameterName = "error"
+reportUnsupportedDunderAll = "error"
+reportUnusedExpression = "error"
+reportWildcardImportFromLibrary = "error"
+reportConstantRedefinition = "error"
+reportDeprecated = "error"
+reportDuplicateImport = "error"
+reportIncompleteStub = "error"
+reportInconsistentConstructor = "error"
+reportInvalidStubStatement = "error"
+reportMatchNotExhaustive = "error"
+reportMissingParameterType = "error"
+reportMissingTypeArgument = "error"
+reportPrivateUsage = "error"
+reportTypeCommentUsage = "error"
+# reportUnknownArgumentType = "error"
+reportUnknownLambdaType = "error"
+# reportUnknownMemberType = "error"
+reportUnknownParameterType = "error"
+# reportUnknownVariableType = "error"
+reportUnnecessaryCast = "error"
+reportUnnecessaryComparison = "error"
+reportUnnecessaryContains = "error"
+reportUnnecessaryIsInstance = "error"
+reportUnusedClass = "error"
+reportUnusedImport = "none"              # Already checked by ruff
+reportUnusedFunction = "error"
+reportUnusedVariable = "error"
+reportUntypedBaseClass = "error"
+reportUntypedClassDecorator = "error"
+reportUntypedFunctionDecorator = "error"
+reportUntypedNamedTuple = "error"
