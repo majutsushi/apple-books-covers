@@ -24,7 +24,7 @@ BASE_URL_LOOKUP = "https://itunes.apple.com/lookup?"
 BASE_URL_SEARCH = "https://itunes.apple.com/search?"
 
 
-@dataclass
+@dataclass(frozen=True)
 class Result:
     author: str
     title: str
@@ -35,6 +35,14 @@ class Result:
         image = "100000x100000-999.jpg"
         artwork_url = urljoin(result["artworkUrl100"], image)
         return cls(result["artistName"], result["trackName"], artwork_url)
+
+    def __eq__(self, value: object, /) -> bool:
+        if isinstance(value, Result):
+            return self.artwork_url == value.artwork_url
+        return NotImplemented
+
+    def __hash__(self) -> int:
+        return hash(self.artwork_url)
 
 
 def load_countries():
@@ -101,12 +109,8 @@ class AppleBooksCovers(Source):
         timeout: int = 30,
         get_best_cover: bool = False,
     ):
-        if identifiers is None:
-            identifiers = {}
-
-        title = " ".join(self.get_title_tokens(title))
-        author = " ".join(self.get_author_tokens(authors))
-        urls = self.get_cover_urls(log, title, author, identifiers)
+        results = self._find_covers(log, title, authors, identifiers)
+        urls = [result.artwork_url for result in results]
 
         if urls:
             self.download_multiple_covers(
@@ -121,16 +125,22 @@ class AppleBooksCovers(Source):
                 self.KEY_MAX_COVERS,
             )
 
-    def get_cover_urls(
+    def _find_covers(
         self,
         log: Log,
-        title: str,
-        author: str,
-        identifiers: dict[str, str],
+        title: str | None = None,
+        authors: tuple[str, ...] | None = None,
+        identifiers: dict[str, str] | None = None,
     ):
+        if identifiers is None:
+            identifiers = {}
+
+        title_tokens = list(self.get_title_tokens(title, strip_subtitle=True))
+        author_tokens = list(self.get_author_tokens(authors, only_first_author=True))
+
         base_params = {
             "entity": "ebook",
-            "limit": int(self.prefs[self.KEY_MAX_COVERS]),
+            "limit": max(10, int(self.prefs[self.KEY_MAX_COVERS])),
             "version": "2",
         }
         country = cast("str", self.prefs[self.KEY_COUNTRY])
@@ -156,22 +166,34 @@ class AppleBooksCovers(Source):
                     results.extend(isbn_results)
 
         # Now do a search
-        search_params = {"term": f"{author} {title}", **base_params}
         search_results = [
-            search({**search_params, "country": country}, self.browser, log)
+            search(
+                author_tokens,
+                title_tokens,
+                {**base_params, "country": country},
+                self.browser,
+                log,
+            )
         ]
         if country2 is not None:
             search_results.append(
-                search({**search_params, "country": country2}, self.browser, log)
+                search(
+                    author_tokens,
+                    title_tokens,
+                    {**base_params, "country": country2},
+                    self.browser,
+                    log,
+                )
             )
         # Since later results are going to be less relevant,
         # we want to prioritize the earlier results from both searches
         results.extend(roundrobin(*search_results))
 
+        # Remove duplicates while preserving order
+        results = list(dict.fromkeys(results))
         log.info(f"Found results: {pprint.pformat(results)}")
 
-        # Remove duplicates while preserving order
-        return list(dict.fromkeys(result.artwork_url for result in results))
+        return results
 
 
 def get_url_json(browser: Browser, url: str) -> dict[str, Any]:
@@ -188,11 +210,44 @@ def lookup(params: dict[str, Any], browser: Browser, log: Log) -> list[Result]:
     return [Result.from_dict(result) for result in results.get("results", [])]
 
 
-def search(params: dict[str, Any], browser: Browser, log: Log) -> list[Result]:
+def search(
+    author_tokens: list[str],
+    title_tokens: list[str],
+    params: dict[str, Any],
+    browser: Browser,
+    log: Log,
+) -> list[Result]:
+    results = do_query({**params, "term": " ".join(title_tokens)}, browser, log)
+    filtered = filter_results(results, author_tokens, title_tokens)
+    if filtered:
+        return filtered
+
+    # Try again by searching for both the title and the author,
+    # which may be useful for very generic titles
+    results = do_query(
+        {**params, "term": f"{' '.join(title_tokens)} {' '.join(author_tokens)}"},
+        browser,
+        log,
+    )
+    return filter_results(results, author_tokens, title_tokens)
+
+
+def do_query(params: dict[str, Any], browser: Browser, log: Log) -> list[Result]:
     url = BASE_URL_SEARCH + urlencode(params)
     log.info("Search URL: " + url)
     results = get_url_json(browser, url)
     return [Result.from_dict(result) for result in results.get("results", [])]
+
+
+def filter_results(
+    results: list[Result], author_tokens: list[str], title_tokens: list[str]
+) -> list[Result]:
+    return [
+        result
+        for result in results
+        if all(token in result.title for token in title_tokens)
+        and all(token in result.author for token in author_tokens)
+    ]
 
 
 T = TypeVar("T")

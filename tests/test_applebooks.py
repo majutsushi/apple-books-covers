@@ -1,11 +1,10 @@
 # noqa: INP001
+# pyright: reportPrivateUsage=false
 
 import os
 import sys
 import typing
 import unittest
-from queue import Queue
-from threading import Event
 
 test_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path = [test_dir, *sys.path]
@@ -22,54 +21,78 @@ class TestAppleBooksCovers(unittest.TestCase):
     def setUp(self):
         self.plugin = AppleBooksCovers(None)
         self.plugin.log = default_log  # type: ignore[reportAttributeAccessIssue]
-        self.queue = Queue()
 
     def test_isbn_lookup(self):
-        max_covers = 5
-        self.plugin.prefs[self.plugin.KEY_MAX_COVERS] = max_covers
         self.plugin.prefs[self.plugin.KEY_COUNTRY] = "US"
         self.plugin.prefs[self.plugin.KEY_ADDITIONAL_COUNTRY] = None
 
-        self.plugin.download_cover(
+        results = self.plugin._find_covers(
             default_log,
-            self.queue,
-            Event(),
             title="The Fifth Witness",
             authors=("Michael Connelly",),
             identifiers={"isbn": "9780316069359"},
         )
-        self.assertGreaterEqual(self.queue.qsize(), 1)
-        self.assertLessEqual(self.queue.qsize(), max_covers)
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].author, "Michael Connelly")
+        self.assertEqual(results[0].title, "The Fifth Witness")
 
     def test_search(self):
-        max_covers = 5
-        self.plugin.prefs[self.plugin.KEY_MAX_COVERS] = max_covers
         self.plugin.prefs[self.plugin.KEY_COUNTRY] = "US"
         self.plugin.prefs[self.plugin.KEY_ADDITIONAL_COUNTRY] = None
 
-        self.plugin.download_cover(
+        results = self.plugin._find_covers(
             default_log,
-            self.queue,
-            Event(),
             title="A Game of Thrones",
             authors=("George R. R. Martin",),
         )
-        self.assertEqual(self.queue.qsize(), max_covers)
+        self.assertEqual(len(results), 2)
+        self.assertEqual(results[0].author, "George R.R. Martin")
+        self.assertEqual(results[0].title, "A Game of Thrones")
+        self.assertEqual(results[1].author, "George R.R. Martin")
+        self.assertEqual(results[1].title, "A Game of Thrones")
+
+    def test_search2(self):
+        self.plugin.prefs[self.plugin.KEY_COUNTRY] = "US"
+        self.plugin.prefs[self.plugin.KEY_ADDITIONAL_COUNTRY] = None
+
+        results = self.plugin._find_covers(
+            default_log,
+            title="The Fifth Season",
+            authors=("N. K. Jemisin",),
+        )
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].author, "N. K. Jemisin")
+        self.assertEqual(results[0].title, "The Fifth Season")
+
+    def test_search_multi_author(self):
+        self.plugin.prefs[self.plugin.KEY_COUNTRY] = "US"
+        self.plugin.prefs[self.plugin.KEY_ADDITIONAL_COUNTRY] = None
+
+        results = self.plugin._find_covers(
+            default_log,
+            title="The Three-Body Problem",
+            authors=("Cixin Liu", "Ken Liu"),
+        )
+        self.assertEqual(len(results), 2)
+        self.assertEqual(results[0].author, "Cixin Liu & Ken Liu")
+        self.assertEqual(results[0].title, "The Three-Body Problem")
+        self.assertEqual(results[1].author, "Cixin Liu, Ken Liu & Joel Martinsen")
+        self.assertEqual(results[1].title, "The Three-Body Problem Series")
 
     def test_multi_store(self):
-        max_covers = 2
-        self.plugin.prefs[self.plugin.KEY_MAX_COVERS] = max_covers
         self.plugin.prefs[self.plugin.KEY_COUNTRY] = "US"
         self.plugin.prefs[self.plugin.KEY_ADDITIONAL_COUNTRY] = "GB"
 
-        self.plugin.download_cover(
+        results = self.plugin._find_covers(
             default_log,
-            self.queue,
-            Event(),
             title="Dark in Death",
             authors=("J. D. Robb",),
         )
-        self.assertEqual(self.queue.qsize(), max_covers)
+        self.assertEqual(len(results), 2)
+        self.assertEqual(results[0].author, "J. D. Robb")
+        self.assertEqual(results[0].title, "Dark in Death")
+        self.assertEqual(results[1].author, "J. D. Robb")
+        self.assertEqual(results[1].title, "Dark in Death")
 
 
 if __name__ == "__main__":
