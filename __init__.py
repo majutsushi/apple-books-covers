@@ -32,7 +32,7 @@ class Result:
 
     @classmethod
     def from_dict(cls, result: dict[str, Any]) -> Result:
-        image = "100000x100000-999.jpg"
+        image = "10000x10000bb.jpg"
         artwork_url = urljoin(result["artworkUrl100"], image)
         return cls(result["artistName"], result["trackName"], artwork_url)
 
